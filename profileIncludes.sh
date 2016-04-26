@@ -2,7 +2,7 @@
 
 repoDir=~/srcs/cprih/
 gitLogAnalyzer=~/bin/analyzeGitLog.awk
-workDir=`pwd`
+workDir=$(pwd)
 callInfoDB=$workDir/callInfo.db
 measureFile=$workDir/measureData.txt
 
@@ -10,8 +10,8 @@ function extractCallInfo(){
     pushd $repoDir > /dev/null
     
     echo "generating and analyzing git logs (last 6 months)..."
-    afterWhen=`date --date='-6 month' "+%Y%m"`
-    git log --stat=200 | $gitLogAnalyzer | awk -F"," -v afterWhen=$afterWhen '{
+    afterWhen=$(date --date='-6 month' "+%Y%m")
+    git log --stat=200 | $gitLogAnalyzer | awk -F"," -v afterWhen="$afterWhen" '{
         sub("-", "", $4)
         if (($2 ~ /(src|testing|interface)\/.*[_a-zA-Z0-9]+\.(h|hpp|cpp)/) && ($4 >= afterWhen)){
             stats[$2]++;
@@ -22,37 +22,37 @@ function extractCallInfo(){
             printf("%s|%d\n", fname, stats[fname]);
         }
     }
-    ' | sort -t "|" -k2 -n -r > $callInfoDB
+    ' | sort -t "|" -k2 -n -r > "$callInfoDB"
     popd > /dev/null
 }
 
 function categorizeCallInfo(){
     #Categorize by header/src
     echo "Categorizing the change info..."
-    cat $callInfoDB | egrep "\.(h|hpp)\|" > $callInfoDB.hdr
-    totalHdr=`cat $callInfoDB.hdr | awk -F"|" '{cnt+=$2} END{print cnt}'`
-    cat $callInfoDB | egrep "\.cpp\|" > $callInfoDB.src
-    totalSrc=`cat $callInfoDB.src | awk -F"|" '{cnt+=$2} END{print cnt}'`
+    egrep "\.(h|hpp)\|" "$callInfoDB" > "$callInfoDB.hdr"
+    totalHdr=$(awk -F"|" '{cnt+=$2} END{print cnt}' "$callInfoDB.hdr")
+    egrep "\.cpp\|" "$callInfoDB" > "$callInfoDB.src"
+    totalSrc=$(awk -F"|" '{cnt+=$2} END{print cnt}' "$callInfoDB.src")
     echo "TotalHdr=$totalHdr, totalSrc=$totalSrc."
 }
 
 function randomPickup(){
     dbFile=$1
-    maxCnt=`wc -l $dbFile | cut -d " " -f1`
+    maxCnt=$(wc -l "$dbFile" | cut -d " " -f1)
 
     gotValid=0
     while [ $gotValid -eq 0 ]; do
         idx=$RANDOM
         let "idx %= $maxCnt" 
-        selectedLine=`cat $dbFile | sed "${idx}q;d"`
-        selectedFile=`echo $selectedLine|cut -d "|" -f1`
-        selectedWeight=`echo $selectedLine|cut -d "|" -f2`
-        selectedScope=`cat $hdrNoLimStats | grep $selectedFile | cut -d "|" -f2 | tr -d " "`
+        selectedLine=$(sed "${idx}q;d" "$dbFile")
+        selectedFile=$(echo "$selectedLine"|cut -d "|" -f1)
+        selectedWeight=$(echo "$selectedLine"|cut -d "|" -f2)
+        selectedScope=$(grep "$selectedFile" "$hdrNoLimStats" | cut -d "|" -f2 | tr -d " ")
         if [ -z "$selectedScope" ];then
             continue
         fi
 
-        [ -f $repoDir/$selectedFile ] && [ $selectedWeight -gt 4 ] && gotValid=1
+        [ -f "$repoDir/$selectedFile" ] && [ "$selectedWeight" -gt 4 ] && gotValid=1
     done
 
     echo "selected: $selectedFile=<changes:$selectedWeight|impacts:$selectedScope>"
@@ -60,7 +60,7 @@ function randomPickup(){
 
 function testCycleTime(){
     pushd $repoDir > /dev/null
-    touch $selectedFile
+    touch "$selectedFile"
     TIMEFORMAT="$selectedFile|$selectedWeight|$selectedScope|%R seconds"
     time {
         make test &> /dev/null
@@ -71,10 +71,10 @@ function testCycleTime(){
 
 function profileHeaderChange(){
     cnt=$1
-    for i in `seq 1 $cnt`; do
+    for i in $(seq 1 "$cnt"); do
         echo "Testing cycle $i ... "
-        randomPickup $callInfoDB.hdr
-        testCycleTime >> $measureFile 2>&1
+        randomPickup "$callInfoDB.hdr"
+        testCycleTime >> "$measureFile" 2>&1
         echo "Test done for touching $selectedFile[weight=$selectedWeight,scope=$selectedScope]."
     done
 }
@@ -93,7 +93,7 @@ function consolidateData(){
         printf("%60s|%8d\n", fname, raw_tm)
     }END{
         printf("Computed time normalized = %.3f\n", raw_tm/factor);
-    }' $measureFile
+    }' "$measureFile"
 }
 
 ################################################################################
@@ -101,10 +101,10 @@ function consolidateData(){
 ################################################################################
 source ~/bin/analyzeIncludes.sh
 
-[ ! -f $callInfoDB ] && extractCallInfo
+[ ! -f "$callInfoDB" ] && extractCallInfo
 
 categorizeCallInfo
 
-[ ! -f $measureFile ] && profileHeaderChange 5
+[ ! -f "$measureFile" ] && profileHeaderChange 5
 
 consolidateData
