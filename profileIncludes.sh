@@ -47,12 +47,15 @@ function randomPickup(){
         selectedLine=`cat $dbFile | sed "${idx}q;d"`
         selectedFile=`echo $selectedLine|cut -d "|" -f1`
         selectedWeight=`echo $selectedLine|cut -d "|" -f2`
-        selectedScope=`echo $hdrNoLimStats | grep $selectedFile | cut -d "|" -f2`
+        selectedScope=`cat $hdrNoLimStats | grep $selectedFile | cut -d "|" -f2 | tr -d " "`
+        if [ -z "$selectedScope" ];then
+            continue
+        fi
 
         [ -f $repoDir/$selectedFile ] && [ $selectedWeight -gt 4 ] && gotValid=1
     done
 
-    echo "selected: $selectedFile=$selectedWeight"
+    echo "selected: $selectedFile=<changes:$selectedWeight|impacts:$selectedScope>"
 }
 
 function testCycleTime(){
