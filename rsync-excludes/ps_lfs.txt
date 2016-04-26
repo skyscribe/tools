@@ -1,0 +1,4 @@
+os/sys-root/powerpc-e500-linux-gnu
+os/platforms/fcmd
+os/platforms/fspc
+os/platforms/qemu*
