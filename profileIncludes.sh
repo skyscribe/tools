@@ -81,7 +81,7 @@ function profileHeaderChange(){
 
 function consolidateData(){
     echo "consolidating..."
-    cat $hdrNoLimStats | awk -F"|" '{
+    awk -F"|" '{
         fname = $1
         weight = $2
         scope = $3
@@ -89,9 +89,11 @@ function consolidateData(){
         time = tmpArr[1]
         raw_tm += time * weight * scope
         factor += weight * scope
+        stats[fname] = weight * score * time
+        printf("%60s|%8d\n", fname, raw_tm)
     }END{
         printf("Computed time normalized = %.3f\n", raw_tm/factor);
-    }'
+    }' $measureFile
 }
 
 ################################################################################
