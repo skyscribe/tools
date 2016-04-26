@@ -47,6 +47,7 @@ function randomPickup(){
         selectedLine=`cat $dbFile | sed "${idx}q;d"`
         selectedFile=`echo $selectedLine|cut -d "|" -f1`
         selectedWeight=`echo $selectedLine|cut -d "|" -f2`
+        selectedScope=`echo $hdrNoLimStats | grep $selectedFile | cut -d "|" -f2`
 
         [ -f $repoDir/$selectedFile ] && [ $selectedWeight -gt 4 ] && gotValid=1
     done
@@ -55,26 +56,50 @@ function randomPickup(){
 }
 
 function testCycleTime(){
-    outf=$measureFile
     pushd $repoDir > /dev/null
     touch $selectedFile
-    TIMEFORMAT="$selectedFile|$selectedWeight|%R seconds"
+    TIMEFORMAT="$selectedFile|$selectedWeight|$selectedScope|%R seconds"
     time {
-        make test
-    } > $measureFile
+        make test &> /dev/null
+        #echo "make test" > /dev/null
+    } 
     popd > /dev/null
+}
+
+function profileHeaderChange(){
+    cnt=$1
+    for i in `seq 1 $cnt`; do
+        echo "Testing cycle $i ... "
+        randomPickup $callInfoDB.hdr
+        testCycleTime >> $measureFile 2>&1
+        echo "Test done for touching $selectedFile[weight=$selectedWeight,scope=$selectedScope]."
+    done
+}
+
+function consolidateData(){
+    echo "consolidating..."
+    cat $hdrNoLimStats | awk -F"|" '{
+        fname = $1
+        weight = $2
+        scope = $3
+        split($4, tmpArr, " ")
+        time = tmpArr[1]
+        raw_tm += time * weight * scope
+        factor += weight * scope
+    }END{
+        printf("Computed time normalized = %.3f\n", raw_tm/factor);
+    }'
 }
 
 ################################################################################
 ### Main procedure
 ################################################################################
+source ~/bin/analyzeIncludes.sh
 
 [ ! -f $callInfoDB ] && extractCallInfo
+
 categorizeCallInfo
 
-for i in `seq 1 100`; do
-    echo "Testing cycle $i ... "
-    randomPickup $callInfoDB.hdr
-    testCycleTime $measureFile
-    echo "Test done for touching $selectedFile[weight=$selectedWeight]."
-done
+[ ! -f $measureFile ] && profileHeaderChange 5
+
+consolidateData

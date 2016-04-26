@@ -36,9 +36,9 @@ function statsByCriteria(){
     cat $outf | sort -k2 -n -t"|" -r | head -$topNo > $outf-top${topNo}
 }
 
-#statsBy  banner  annotation             idx topNo FileOut
-statsBy   "src"   "including   testing"   1   10   $cppStats
-statsBy   "src"   "pure        src"       1   10   $srcStats
-statsBy   "hdr"   "inc.        LIM"       2   10   $hdrStats
-statsBy   "hdr"   "excl.       LIM"       2   10   $hdrNoLimStats
+#statsByCriteria  banner  annotation             idx topNo FileOut
+statsByCriteria   "src"   "including   testing"   1   10   $cppStats
+statsByCriteria   "src"   "pure        src"       1   10   $srcStats
+statsByCriteria   "hdr"   "inc.        LIM"       2   10   $hdrStats
+statsByCriteria   "hdr"   "excl.       LIM"       2   10   $hdrNoLimStats
 
