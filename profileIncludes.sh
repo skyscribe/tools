@@ -45,13 +45,13 @@ function categorizeCallInfo(){
     echo "TotalHdr=$totalHdr, totalSrc=$totalSrc."
 }
 
-function testCycleTime(){
+function measureRebuildPerGivenFileChange(){
     pushd $repoDir > /dev/null
     touch "$selectedFile"
     TIMEFORMAT="$selectedFile|$selectedWeight|$selectedScope|%R seconds"
     time {
-        make test &> /dev/null
-        #echo "make test" > /dev/null
+        #make test &> /dev/null
+        echo "make test" > /dev/null
     } 
     popd > /dev/null
 }
@@ -63,21 +63,32 @@ function profileHeaderChange(){
     while [ "$i" -lt "$cnt" ]; do
         indices=($(shuf -i 1-$fileIdMax -n $cnt))
         for idx in $indices; do
-            selectedLine=$(sed "${idx}q;d" "$hdrNoLimStats")
-            selectedFile=$(echo "$selectedLine"|cut -d "|" -f1 | tr -d " ")
-            selectedScope=$(echo "$selectedLine"|cut -d "|" -f2 | tr -d " ")
-            selectedWeight=$(grep "$selectedFile" "$callInfoDB.hdr" | cut -d "|" -f2)
-            if [ -z "$selectedWeight" ];then
-                echo -n "F"
-                continue;
+            validateChosenFile "$idx" "$hdrNoLimStats"
+            if [ "$found" -eq 1 ]; then
+                measureRebuildPerGivenFileChange >> "$measureFile" 2>&1
+                i=$(echo "$i + 1" | bc)
+                echo "[$i/$cnt] - Test done for touching $selectedFile[weight=$selectedWeight,scope=$selectedScope]."
             fi
-
-            echo "selected: $selectedFile=<changes:$selectedWeight|impacts:$selectedScope>"
-            testCycleTime >> "$measureFile" 2>&1
-            i=$(echo "$i + 1" | bc)
-            echo "[$i/$cnt] - Test done for touching $selectedFile[weight=$selectedWeight,scope=$selectedScope]."
         done
     done
+}
+
+function validateChosenFile(){
+    lineNo=$1
+    rawInputFile=$2
+
+    selectedLine=$(sed "${lineNo}q;d" "$rawInputFile")
+    selectedFile=$(echo "$selectedLine"|cut -d "|" -f1 | tr -d " ")
+    selectedScope=$(echo "$selectedLine"|cut -d "|" -f2 | tr -d " ")
+    selectedWeight=$(grep "$selectedFile" "$callInfoDB" | cut -d "|" -f2)
+    if [ -z "$selectedWeight" ];then
+        echo -n "F"
+        found=0
+        return
+    fi
+
+    echo "selected: $selectedFile=<changes:$selectedWeight|impacts:$selectedScope>"
+    found=1
 }
 
 function consolidateData(){
@@ -104,5 +115,5 @@ source ~/bin/analyzeIncludes.sh
 
 [ ! -f "$callInfoDB" ] && extractCallInfo
 categorizeCallInfo
-[ ! -f "$measureFile" ] && profileHeaderChange 100
+[ ! -f "$measureFile" ] && profileHeaderChange 10
 consolidateData
