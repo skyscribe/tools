@@ -22,7 +22,16 @@ function extractCallInfo(){
             printf("%s|%d\n", fname, stats[fname]);
         }
     }
-    ' | sort -t "|" -k2 -n -r > "$callInfoDB"
+    ' | sort -t "|" -k2 -n -r | while read line; do
+        # Some changed files (per history) may no longer be available in current repo.
+        fpath=$(echo "$line" | cut -d "|" -f1)
+        if [ ! -f "$repoDir/$fpath" ]; then
+            continue
+        else
+            echo "$line"
+        fi
+    done >  "$callInfoDB"
+
     popd > /dev/null
 }
 
@@ -42,13 +51,20 @@ function randomPickup(){
 
     gotValid=0
     while [ $gotValid -eq 0 ]; do
-        idx=$RANDOM
-        let "idx %= $maxCnt" 
+        idx=$(echo "$RANDOM % $maxCnt + 1" | bc)
         selectedLine=$(sed "${idx}q;d" "$dbFile")
         selectedFile=$(echo "$selectedLine"|cut -d "|" -f1)
         selectedWeight=$(echo "$selectedLine"|cut -d "|" -f2)
+        
+        # Skip if an existing file was picked up
+        if grep -q "$selectedFile" "$measureFile"; then
+            echo "choosing next due to existed measurements for $measureFile..."
+            continue
+        fi
+
         selectedScope=$(grep "$selectedFile" "$hdrNoLimStats" | cut -d "|" -f2 | tr -d " ")
         if [ -z "$selectedScope" ];then
+            echo "choosing next due to invalid $selectedFile..."
             continue
         fi
 
@@ -63,8 +79,8 @@ function testCycleTime(){
     touch "$selectedFile"
     TIMEFORMAT="$selectedFile|$selectedWeight|$selectedScope|%R seconds"
     time {
-        make test &> /dev/null
-        #echo "make test" > /dev/null
+        #make test &> /dev/null
+        echo "make test" > /dev/null
     } 
     popd > /dev/null
 }
@@ -105,6 +121,6 @@ source ~/bin/analyzeIncludes.sh
 
 categorizeCallInfo
 
-[ ! -f "$measureFile" ] && profileHeaderChange 5
+[ ! -f "$measureFile" ] && profileHeaderChange 10
 
 consolidateData
