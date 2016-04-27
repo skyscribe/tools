@@ -45,53 +45,38 @@ function categorizeCallInfo(){
     echo "TotalHdr=$totalHdr, totalSrc=$totalSrc."
 }
 
-function randomPickup(){
-    dbFile=$1
-    maxCnt=$(wc -l "$dbFile" | cut -d " " -f1)
-
-    gotValid=0
-    while [ $gotValid -eq 0 ]; do
-        idx=$(echo "$RANDOM % $maxCnt + 1" | bc)
-        selectedLine=$(sed "${idx}q;d" "$dbFile")
-        selectedFile=$(echo "$selectedLine"|cut -d "|" -f1)
-        selectedWeight=$(echo "$selectedLine"|cut -d "|" -f2)
-        
-        # Skip if an existing file was picked up
-        if grep -q "$selectedFile" "$measureFile"; then
-            echo "choosing next due to existed measurements for $measureFile..."
-            continue
-        fi
-
-        selectedScope=$(grep "$selectedFile" "$hdrNoLimStats" | cut -d "|" -f2 | tr -d " ")
-        if [ -z "$selectedScope" ];then
-            echo "choosing next due to invalid $selectedFile..."
-            continue
-        fi
-
-        [ -f "$repoDir/$selectedFile" ] && [ "$selectedWeight" -gt 4 ] && gotValid=1
-    done
-
-    echo "selected: $selectedFile=<changes:$selectedWeight|impacts:$selectedScope>"
-}
-
 function testCycleTime(){
     pushd $repoDir > /dev/null
     touch "$selectedFile"
     TIMEFORMAT="$selectedFile|$selectedWeight|$selectedScope|%R seconds"
     time {
-        #make test &> /dev/null
-        echo "make test" > /dev/null
+        make test &> /dev/null
+        #echo "make test" > /dev/null
     } 
     popd > /dev/null
 }
 
 function profileHeaderChange(){
     cnt=$1
-    for i in $(seq 1 "$cnt"); do
-        echo "Testing cycle $i ... "
-        randomPickup "$callInfoDB.hdr"
-        testCycleTime >> "$measureFile" 2>&1
-        echo "Test done for touching $selectedFile[weight=$selectedWeight,scope=$selectedScope]."
+    fileIdMax=$(wc -l $hdrNoLimStats | cut -d " " -f1)
+    i=1
+    while [ "$i" -lt "$cnt" ]; do
+        indices=($(shuf -i 1-$fileIdMax -n $cnt))
+        for idx in $indices; do
+            selectedLine=$(sed "${idx}q;d" "$hdrNoLimStats")
+            selectedFile=$(echo "$selectedLine"|cut -d "|" -f1 | tr -d " ")
+            selectedScope=$(echo "$selectedLine"|cut -d "|" -f2 | tr -d " ")
+            selectedWeight=$(grep "$selectedFile" "$callInfoDB.hdr" | cut -d "|" -f2)
+            if [ -z "$selectedWeight" ];then
+                echo -n "F"
+                continue;
+            fi
+
+            echo "selected: $selectedFile=<changes:$selectedWeight|impacts:$selectedScope>"
+            testCycleTime >> "$measureFile" 2>&1
+            i=$(echo "$i + 1" | bc)
+            echo "[$i/$cnt] - Test done for touching $selectedFile[weight=$selectedWeight,scope=$selectedScope]."
+        done
     done
 }
 
@@ -118,9 +103,6 @@ function consolidateData(){
 source ~/bin/analyzeIncludes.sh
 
 [ ! -f "$callInfoDB" ] && extractCallInfo
-
 categorizeCallInfo
-
-[ ! -f "$measureFile" ] && profileHeaderChange 10
-
+[ ! -f "$measureFile" ] && profileHeaderChange 100
 consolidateData
