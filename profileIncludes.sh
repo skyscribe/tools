@@ -50,8 +50,8 @@ function measureRebuildPerGivenFileChange(){
     touch "$selectedFile"
     TIMEFORMAT="$selectedFile|$selectedWeight|$selectedScope|%R seconds"
     time {
-        #make test &> /dev/null
-        echo "make test" > /dev/null
+        make test &> /dev/null
+        #echo "make test" > /dev/null
     } 
     popd > /dev/null
 }
@@ -87,6 +87,12 @@ function validateChosenFile(){
         return
     fi
 
+    if [ "$selectedScope" -lt 4 ]; then
+        echo -n "S"
+        found=0
+        return
+    fi
+
     echo "selected: $selectedFile=<changes:$selectedWeight|impacts:$selectedScope>"
     found=1
 }
@@ -115,5 +121,5 @@ source ~/bin/analyzeIncludes.sh
 
 [ ! -f "$callInfoDB" ] && extractCallInfo
 categorizeCallInfo
-[ ! -f "$measureFile" ] && profileHeaderChange 10
+[ ! -f "$measureFile" ] && profileHeaderChange 100
 consolidateData
