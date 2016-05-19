@@ -3,6 +3,10 @@
 testWd=~/srcs/mfo/dcs
 repFile="$testWd/sct_info.csv"
 
+teardown(){
+    rm -f $repFile
+}
+
 @test "should parse successfully for clean parsing" {
     cd $testWd
     rm -f $repFile
@@ -18,7 +22,6 @@ repFile="$testWd/sct_info.csv"
     [ "$status" -eq 0 ]
     lines=$(head -1 $repFile)
     [ "$lines" = "dummytest" ]
-    rm $repFile
 }
 
 @test "should take passed directory as working directory" {
