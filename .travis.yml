@@ -6,3 +6,4 @@ before_install:
 script:
     - bats dummy.bats
     - bats clocSrc.bats
+    - ./clocSrc.sh ./test-files/clocSrc/
