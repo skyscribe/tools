@@ -1,0 +1,12 @@
+#copied from open source 
+iwyu_tool.py
+gh-md-toc
+
+#swap files
+.*.swo
+
+#zips
+*.zip
+
+#backups
+test-files/parseSCTInfoForDCS/sct_info.csv.bk
