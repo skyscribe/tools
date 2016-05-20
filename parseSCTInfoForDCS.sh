@@ -18,6 +18,7 @@ function checkAndGenerateReport(){
 }
 
 function generateDetailedReport(){
+    echo "topology,type,topo,trx,bandwidth,boards,radios,desc" > $detailsFile
     find $dcsFolder -type f -a -path "*/testcases/*.ttcn3" | sed -n "s/^.*\///gp" | while read fileName; do
         echo "$fileName" | gawk -F"_" '{
             if ($0 ~ /^L/) exit
@@ -45,7 +46,7 @@ function generateDetailedReport(){
             gsub(/^_/, "", output)
             print output
         }'
-    done  > $detailsFile
+    done  >> $detailsFile
 }
 
 #######################################################################################

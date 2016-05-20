@@ -1,22 +1,23 @@
 #!/usr/bin/env bats
-
-testWd=~/srcs/mfo/dcs
+testWd="$(pwd)/test-files/parseSCTInfoForDCS"
 repFile="$testWd/sct_info.csv"
 
-teardown(){
+setup(){
+    cd $testWd
+    rm -f $repFile
+}
+
+teradown(){
     rm -f $repFile
 }
 
 @test "should parse successfully for clean parsing" {
-    cd $testWd
-    rm -f $repFile
     run parseSCTInfoForDCS.sh
     [ "$status" -eq 0 ]
     [ -f $repFile ]
 }
 
 @test "should not generate report if legacy one exists" {
-    cd $testWd
     echo "dummytest" > $repFile
     run parseSCTInfoForDCS.sh
     [ "$status" -eq 0 ]
@@ -28,4 +29,10 @@ teardown(){
     run parseSCTInfoForDCS.sh $testWd
     [ "$status" -eq 0 ]
     [ -f $repFile ]
+}
+
+@test "should have one single header for generated report" {
+    run parseSCTInfoForDCS.sh
+    headerCnt=$(grep -c "topology,type" $repFile) || echo "-"
+    [ $headerCnt -eq 1 ] 
 }

@@ -1,0 +1,8 @@
+topology,type,topo,trx,bandwidth,boards,radios,desc
+T1111,,444_444_444_444,,20M,FSIH_FBIH,48FZNN,CPRI_Supercell_1TX1RX.ttcn3
+,,,,,,,a_general_case.ttcn3
+T1,,,,10MHz,FSIH,,uplane_FZFFe_FspCompensation.ttcn3
+T1111,K,,,20MHz,FSIP,,4FZHI.ttcn3
+T111111,,,2TXRX,,FSMF_2FBBA,,6x20MHz_Configuration.ttcn3
+T1x12,,,,,FSIH_FBIH,12FZNE,uplane_CPRI_FspCompensation.ttcn3
+T1111,,75_7_75_7,,20M,FSIH_FBIH,38FZNN,CPRI_Supercell_1TX1RX.ttcn3
